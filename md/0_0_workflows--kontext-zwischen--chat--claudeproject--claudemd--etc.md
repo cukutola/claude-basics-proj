@@ -311,9 +311,9 @@ Ein Chat = Eine abgeschlossene Aufgabe
 **Transition-Template:**
 
 ```
-"Fasse die wichtigsten Entscheidungen und Ergebnisse 
-dieses Chats in 3–5 Bullet-Points zusammen, 
-so dass ich den Kontext in einem neuen Chat 
+"Fasse die wichtigsten Entscheidungen und Ergebnisse
+dieses Chats in 3–5 Bullet-Points zusammen,
+so dass ich den Kontext in einem neuen Chat
 effizient weitergeben kann."
 ```
 
@@ -354,7 +354,151 @@ Ideal für           Einmaliges    Wiederkehrend Implementierung
 
 ---
 
-## 6. Anti-Patterns – Was vermeiden?
+## 6. Wissensbasis-Wartung & Chat-Verwaltung
+
+### 6.1 Was passiert mit Chats im Projekt – das richtige Verständnis
+
+Das ist der am häufigsten misverstandene Punkt:
+
+```
+Was Claude in einem neuen Projekt-Chat sieht:
+┌──────────────────────────────────────────────────────┐
+│  Projektanweisungen              ✓  (immer, komplett) │
+│  Wissensbasis / KB (RAG)         ✓  (relevante Teile) │
+│  Aktueller Chat-Verlauf          ✓  (kumulierend!)    │
+│                                                       │
+│  Andere / ältere Projekt-Chats   ✗  NICHT            │
+└──────────────────────────────────────────────────────┘
+```
+
+Jeder Chat ist eine **isolierte Sitzung**. Was alle Chats im Projekt teilen: Projektanweisungen und Wissensbasis – über RAG, nicht als Volltext. Was sie **nicht** teilen: gegenseitigen Chat-Verlauf.
+
+Die einzige automatische Brücke zwischen Chats ist das **Memory-Feature** (Settings → Capabilities → „Generate memory from chat history"). Es erstellt alle 24h eine grobe thematische Zusammenfassung – kein präziser Code-Kontext, eher Themen-Awareness.
+
+**Praktische Konsequenz:** Wenn in Chat 1 ein Service implementiert wurde und in Chat 2 derselbe Service weiterentwickelt wird – Claude in Chat 2 weiß nichts von Chat 1, außer was in der KB steht oder was manuell reinkopiert wird.
+
+---
+
+### 6.2 Soll ich ältere Chats löschen?
+
+**Klare Antwort: Nein – stehen lassen, aber nicht als Kontext-Quelle verlassen.**
+
+```
+Alter Chat löschen    → schadet (Memory-Feature verliert seine Basis;
+                         gelöschte Chats werden binnen 24h aus der
+                         Memory-Synthese entfernt)
+Alter Chat behalten   → kein Nachteil (kostet kein Token-Budget
+                         in neuen Sessions)
+Auf alten Chat bauen  → funktioniert NICHT automatisch
+                        (nur über Chat-Search explizit auf Nachfrage)
+```
+
+Das **Chat-Search-Feature** (Settings → „Search and reference chats") erlaubt es, gezielt in alten Chats zu suchen – aber nur explizit auf Anfrage, nie automatisch im Hintergrund. Was Claude dauerhaft wissen soll, gehört in die KB, nicht in einen alten Chat.
+
+---
+
+### 6.3 Szenario: Feature/Fix implementiert – was jetzt?
+
+Du hast in einem Projekt-Chat Features gebaut, neuen Code geschrieben, Bestehendes angepasst. Der Code ist ins Repo geflossen.
+
+**Die Kernfrage: Hat sich das *Referenzwissen* geändert?**
+
+```
+Neuer Code im Repo              → Kein KB-Update nötig
+                                  (KB spiegelt stabiles Wissen,
+                                   nicht den laufenden Code-Stand)
+
+Neue Tabelle / DB-Änderung      → schema.md aktualisieren + neu hochladen
+Neue Schicht / neues Modul      → architecture.md aktualisieren
+Neue Konvention beschlossen     → conventions.md ergänzen
+Komplexe Entscheidung gefallen  → Kontext-Snapshot erstellen
+```
+
+**Entscheidungsbaum nach einem Chat:**
+
+```
+Chat beendet, Code ist im Repo
+         │
+         ▼
+Hat sich Schema / Architektur / Konventionen geändert?
+         │
+         ├── Nein → Fertig. Nächster Chat kann starten.
+         │
+         └── Ja  → Welche Datei betrifft es?
+                       ├── schema.md       → update → KB neu hochladen
+                       ├── architecture.md → update → KB neu hochladen
+                       └── conventions.md  → ergänzen → KB neu hochladen
+
+War die Entscheidung komplex / nicht offensichtlich?
+         ├── Nein → Fertig.
+         └── Ja   → Kontext-Snapshot generieren (→ 6.4)
+                    → in docs/context-snapshots/ committen
+                    → als Einstieg in nächsten thematisch
+                      verwandten Chat kopieren
+```
+
+---
+
+### 6.4 Prompts für KB-Wartung & Snapshots
+
+**KB-Update nach Schema-Änderung:**
+```
+Das Datenbankschema hat sich geändert.
+Bitte aktualisiere meine schema.md:
+
+Aktuelle schema.md:
+[INHALT EINFÜGEN]
+
+Änderungen in diesem Chat:
+- Neue Tabelle: [Name] mit Spalten [...]
+- Geänderte Spalte: [...]
+- Neue Beziehung: [...]
+
+Erstelle die aktualisierte schema.md im gleichen Format.
+Maximal 300 Zeilen – sie wird als KI-Kontext verwendet.
+```
+
+→ Dann: alte Datei aus KB löschen · neue hochladen · ins Repo committen.
+
+**Kontext-Snapshot für komplexe Chats:**
+```
+Erstelle einen Kontext-Snapshot dieses Chats.
+Format (max. 20 Zeilen):
+
+# Snapshot: [DATUM] – [THEMA]
+
+## Entscheidungen
+- [Was wurde entschieden und warum]
+
+## Implementiert
+- [Was wurde gebaut / geändert – Dateinamen, Klassen]
+
+## Wichtige Details / Workarounds
+- [Was nicht offensichtlich ist und später relevant sein könnte]
+
+## Nächste Schritte
+- [Was offen bleibt]
+```
+
+→ Ergebnis in `docs/context-snapshots/YYYY-MM-DD-thema.md` committen.
+
+---
+
+### 6.5 Wann KB-Dokumente aktualisieren?
+
+| Ereignis | Aktion |
+|----------|--------|
+| Neue DB-Tabelle / Spaltenänderung | `schema.md` update + neu hochladen |
+| Neues Modul / neue Schicht | `architecture.md` update + neu hochladen |
+| Neues Coding-Pattern beschlossen | `conventions.md` ergänzen + neu hochladen |
+| Claude gibt falsche KB-basierte Antworten | Betroffenes Dokument prüfen + korrigieren |
+| Dokument im Repo geändert, aber nicht in KB | KB-Version ist veraltet → neu hochladen |
+
+**Faustregel:** KB-Dokumente spiegeln **stabiles Referenzwissen**, nicht den täglichen Code-Stand. Nicht nach jedem Feature-Chat automatisch updaten – nur wenn sich die Grundstruktur geändert hat.
+
+---
+
+## 7. Anti-Patterns – Was vermeiden?
 
 ### Anti-Pattern 1: Der Kontext-Monster-Chat
 Wochenlange Konversation zu allem. Wird langsamer, teurer, Claude "vergisst" frühe Entscheidungen durch Kontext-Overflow.
@@ -369,11 +513,17 @@ Alle `.cs`-Dateien hochladen. RAG findet nichts, weil das Signal-zu-Rauschen-Ver
 Von "API-Design" zu "SQL-Performance" im selben Chat ohne Split. Der frühe API-Kontext stört die SQL-Diskussion und kostet unnötig Tokens.
 
 ### Anti-Pattern 5: Wissensbasis nie aktualisieren
-Veraltetes Schema in der KB führt zu falschen Antworten. KB-Dokumente regelmäßig aktualisieren wenn sich die Realität ändert.
+Veraltetes Schema in der KB führt zu falschen Antworten. KB-Dokumente aktualisieren wenn sich die Grundstruktur ändert.
+
+### Anti-Pattern 6: Auf alte Chats vertrauen statt KB
+"Das haben wir doch schon in Chat 3 besprochen" – Claude in Chat 10 weiß das nicht. Was Claude dauerhaft wissen soll, gehört in die KB, nicht in einen alten Chat.
+
+### Anti-Pattern 7: Chats löschen für "Aufräumen"
+Alte Chats kosten kein Budget in neuen Sessions. Löschen schadet der Memory-Synthese. Einfach stehen lassen.
 
 ---
 
-## 7. Empfohlenes Setup für `myproject` (Starter)
+## 8. Empfohlenes Setup für `myproject` (Starter)
 
 ### Schritt 1: claude.ai Projekt anlegen
 ```
@@ -441,13 +591,14 @@ Implementierung    → Claude Code (Neovim: <leader>a)
 Review/Doku        → claude.ai Projekt-Chat (neuer Chat)
 Chat-Limit         → Max ~15–20 Nachrichten, dann Split
 Transition         → Immer Zusammenfassung am Chat-Ende
-KB-Refresh         → Bei Schema-Änderungen aktualisieren
+KB-Refresh         → Nur bei Struktur-Änderungen (Schema, Architektur)
+Alte Chats         → Stehen lassen, nicht löschen
 CLAUDE.md-Review   → Monatlich, nach Code-Reviews
 ```
 
 ---
 
-## 8. Kurzreferenz-Karte
+## 9. Kurzreferenz-Karte
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -465,45 +616,19 @@ CLAUDE.md-Review   → Monatlich, nach Code-Reviews
 │  Thema wechselt?            → Neuer Chat                    │
 │  Kontext "vergessen"?       → KB prüfen / CLAUDE.md prüfen  │
 │  Limits erreicht?           → Modell wechseln (Sonnet!)     │
+├─────────────────────────────────────────────────────────────┤
+│  NACH EINEM FEATURE/FIX-CHAT:                               │
+│  Schema/Architektur geändert? → KB-Doc updaten + hochladen  │
+│  Komplexe Entscheidung?       → Kontext-Snapshot erstellen  │
+│  Sonst?                       → Nichts tun, nächster Chat   │
+│  Alte Chats löschen?          → Nein. Niemals.              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-*Aufbauend auf: CLAUDE.md (Grundlagen) + CLAUDE-limits.md (Limits & Effizienz)* 
+*Aufbauend auf: CLAUDE.md (Grundlagen) + CLAUDE-limits.md (Limits & Effizienz)*  
 *Stand: März 2026*
-
----
-
-# Konkreter Setup für den Arbeitsplatz
-
-## Prompt
-
-Empfohlenes Setup für `myproject` (Starter):
-* aufgaben und einsatzzwecke:
-   * entwicklung des c#-apps: features, fehlerbehebung, analyse, visualisierung, berichterstellung, etc
-* prompts und anweisungen: 
-   * alle prompts und anweisungen, wie z.b. zum erstellen der vorgeschlagenen dateien `schema.md`, `architecture.md`, etc, einschließen.
-* umgebung und konkretes szenario:
-   * setup-umgebung:
-      * arbeitsplatz: kein claude-code!
-      * github-repo: csharp-projektdateien.
-
-## Antwort
-
-Lass mich kurz die bisherigen Docs lesen für vollständige Kontinuität:Klar – kein Claude Code, nur claude.ai Web + GitHub-Repo. Das ändert den Stack fundamental. Jetzt schreibe ich das vollständige Setup-Dokument mit allen konkreten Prompts:Das Dokument ist vollständig auf dein Setup zugeschnitten. Die wichtigste Korrektur gegenüber dem vorherigen Workflow-Doc:
-
-**`CLAUDE.md` entfällt komplett** – das ist ein Claude Code-Feature für Terminal-Sessionen. In deinem Setup übernimmt das `docs/`-Trio im Repo (schema, architecture, conventions) die Rolle des persistenten Kontexts, aber als Wissensbasis im claude.ai-Projekt statt als automatisch geladene Datei.
-
-Die drei Kern-Punkte des Setups in der Kurzform:
-
-```
-Repo-Docs (docs/*.md)     → Wissensbasis im claude.ai Projekt
-Projektanweisungen        → Permanenter Kontext (ersetzt CLAUDE.md)
-Transition-Snapshots      → Brücke zwischen Chats (manuell generiert)
-```
-
-Und der entscheidende praktische Hinweis für den Code-Austausch ohne Claude Code: nie die ganze Datei einfügen – nur den relevanten Ausschnitt (Klasse, Methode, Query). Das hält jeden Chat schlank und vermeidet frühen Kontext-Overflow.
 
 ---
 
