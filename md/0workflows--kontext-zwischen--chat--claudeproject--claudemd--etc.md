@@ -470,5 +470,747 @@ CLAUDE.md-Review   → Monatlich, nach Code-Reviews
 
 ---
 
-*Aufbauend auf: CLAUDE.md (Grundlagen) + CLAUDE-limits.md (Limits & Effizienz)*  
+*Aufbauend auf: CLAUDE.md (Grundlagen) + CLAUDE-limits.md (Limits & Effizienz)* 
 *Stand: März 2026*
+
+---
+
+# Konkreter Setup für den Arbeitsplatz
+
+## Prompt
+
+Empfohlenes Setup für `myproject` (Starter):
+* aufgaben und einsatzzwecke:
+   * entwicklung des c#-apps: features, fehlerbehebung, analyse, visualisierung, berichterstellung, etc
+* prompts und anweisungen: 
+   * alle prompts und anweisungen, wie z.b. zum erstellen der vorgeschlagenen dateien `schema.md`, `architecture.md`, etc, einschließen.
+* umgebung und konkretes szenario:
+   * setup-umgebung:
+      * arbeitsplatz: kein claude-code!
+      * github-repo: csharp-projektdateien.
+
+## Antwort
+
+Lass mich kurz die bisherigen Docs lesen für vollständige Kontinuität:Klar – kein Claude Code, nur claude.ai Web + GitHub-Repo. Das ändert den Stack fundamental. Jetzt schreibe ich das vollständige Setup-Dokument mit allen konkreten Prompts:Das Dokument ist vollständig auf dein Setup zugeschnitten. Die wichtigste Korrektur gegenüber dem vorherigen Workflow-Doc:
+
+**`CLAUDE.md` entfällt komplett** – das ist ein Claude Code-Feature für Terminal-Sessionen. In deinem Setup übernimmt das `docs/`-Trio im Repo (schema, architecture, conventions) die Rolle des persistenten Kontexts, aber als Wissensbasis im claude.ai-Projekt statt als automatisch geladene Datei.
+
+Die drei Kern-Punkte des Setups in der Kurzform:
+
+```
+Repo-Docs (docs/*.md)     → Wissensbasis im claude.ai Projekt
+Projektanweisungen        → Permanenter Kontext (ersetzt CLAUDE.md)
+Transition-Snapshots      → Brücke zwischen Chats (manuell generiert)
+```
+
+Und der entscheidende praktische Hinweis für den Code-Austausch ohne Claude Code: nie die ganze Datei einfügen – nur den relevanten Ausschnitt (Klasse, Methode, Query). Das hält jeden Chat schlank und vermeidet frühen Kontext-Overflow.
+
+---
+
+# CLAUDE-setup-myproject.md
+## Vollständiges Setup: myproject (C#-App) auf claude.ai
+### Ohne Claude Code · GitHub-Repo · Web-only Workflow
+
+> **Stand:** März 2026  
+> **Umgebung:** claude.ai Web (Pro/Max) · GitHub · kein Claude Code · kein Terminal-Zugang zu Claude  
+> **Aufbauend auf:** CLAUDE.md · CLAUDE-limits.md · CLAUDE-workflows.md
+
+---
+
+## 0. Architektur des Setups (Übersicht)
+
+```
+╔══════════════════════════════════════════════════════════════════╗
+║                    MYPROJECT – SETUP ÜBERSICHT                   ║
+╠══════════════════════════════════════════════════════════════════╣
+║                                                                  ║
+║   GitHub-Repo (myproject)          claude.ai/project/myproject   ║
+║   ─────────────────────────        ─────────────────────────     ║
+║   /docs/                           Projektanweisungen            ║
+║     schema.md          ──upload──▶ Wissensbasis (KB):            ║
+║     architecture.md    ──upload──▶  • schema.md                  ║
+║     conventions.md     ──upload──▶  • architecture.md            ║
+║   /src/                             • conventions.md             ║
+║     (C#-Quellcode)     ──paste───▶  • [bei Bedarf: Dateiauszug]  ║
+║                                                                  ║
+║   Kein CLAUDE.md nötig!            Projektanweisungen =          ║
+║   (ist Claude Code-Feature)        Permanenter Kontext           ║
+║                                                                  ║
+╚══════════════════════════════════════════════════════════════════╝
+```
+
+**Kernprinzip ohne Claude Code:**
+- GitHub-Repo = Quellcode-Heimat (wie immer)
+- `docs/`-Ordner im Repo = Referenzdokumente (schema, architecture, ...)
+- claude.ai Projekt = KI-Arbeitsumgebung mit KB aus diesen Docs
+- Kein `CLAUDE.md` (das ist ein Claude Code-Feature für Terminal-Sessionen)
+- Code-Austausch: manuell per Copy/Paste in den Chat
+
+---
+
+## 1. GitHub-Repo: Struktur einrichten
+
+### Empfohlene Repo-Struktur
+
+```
+myproject/
+├── docs/                          ← Referenzdokumente für KB
+│   ├── schema.md                  ← DB-Schema (Hauptreferenz)
+│   ├── architecture.md            ← Architektur-Überblick
+│   ├── conventions.md             ← Coding-Konventionen
+│   └── context-snapshots/         ← Chat-Übergänge (optional)
+│       ├── 2026-03-feature-x.md   ← Transition-Zusammenfassungen
+│       └── ...
+├── src/
+│   ├── MyProject.Api/             ← ASP.NET Minimal API
+│   ├── MyProject.Services/        ← Business Logic
+│   ├── MyProject.Data/            ← Repository / SQL
+│   └── MyProject.Tests/           ← xUnit Tests
+└── README.md
+```
+
+> Die `docs/`-Dateien werden einmal erstellt (→ Abschnitt 2), ins Repo committed, und in die claude.ai-Wissensbasis hochgeladen. Bei Änderungen: Datei aktualisieren, neu hochladen.
+
+---
+
+## 2. Referenzdokumente erstellen – Alle Prompts
+
+Die folgenden Prompts werden jeweils in einem **freien Chat** (nicht im Projekt) ausgeführt, da es sich um einmalige Erstellungsaufgaben handelt. Das Ergebnis wird als `.md`-Datei ins Repo gespeichert.
+
+---
+
+### 2.1 `docs/schema.md` erstellen
+
+**Kontext:** Du hast bereits ein bestehendes Datenbankschema (oder weißt was du brauchst).
+
+**Prompt A – Schema aus bestehendem SQL generieren:**
+```
+Ich habe folgendes MS SQL Server Datenbankschema (CREATE TABLE Statements).
+Erstelle daraus eine kompakte schema.md Referenzdatei für mein Entwicklungsteam und für KI-Assistenten.
+
+Format:
+- Jede Tabelle: Name, Kurzbeschreibung (1 Satz), Spalten mit Typ und Zweck
+- Beziehungen zwischen Tabellen (Foreign Keys, logische Verknüpfungen)
+- Wichtige Constraints und Besonderheiten
+- Maximale Länge: 2–3 Seiten (token-effizient, kein Overhead)
+
+Mein Schema:
+[HIER SQL EINFÜGEN]
+```
+
+**Prompt B – Schema von Grund auf entwickeln:**
+```
+Ich entwickle eine C#-App mit MS SQL Server Backend.
+Zweck der App: [KURZE BESCHREIBUNG – z.B. "Projektverwaltung für kleine Teams"]
+
+Hauptentitäten: [z.B. "Projekte, Aufgaben, Benutzer, Zeiterfassung"]
+
+Erstelle:
+1. Ein sinnvolles MS SQL Datenbankschema (CREATE TABLE Statements, T-SQL)
+2. Direkt danach: eine schema.md Referenzdatei im folgenden Format:
+
+# Schema: myproject
+
+## Tabellen
+### [Tabellenname]
+**Zweck:** [1 Satz]
+| Spalte | Typ | Beschreibung |
+|--------|-----|--------------|
+| ...    | ... | ...          |
+
+**Beziehungen:** [Foreign Keys, logische Verknüpfungen]
+
+## Wichtige Constraints
+[Unique Constraints, Check Constraints, Besonderheiten]
+
+## Indizes (empfohlen)
+[Performance-relevante Indizes]
+
+Halte die Datei unter 300 Zeilen – sie wird als KI-Kontext verwendet.
+```
+
+---
+
+### 2.2 `docs/architecture.md` erstellen
+
+**Prompt:**
+```
+Ich entwickle eine C#/.NET Anwendung. Erstelle eine architecture.md 
+Referenzdatei für Entwickler und KI-Assistenten.
+
+Projektdetails:
+- App-Typ: [z.B. "ASP.NET Core Web API / Minimal API"]
+- Frontend: [z.B. "Blazor / React / keins (nur API)"]
+- Backend: C# / .NET 9
+- Datenbank: MS SQL Server
+- Hosting: [z.B. "Azure App Service / lokaler Server / noch offen"]
+- Wichtige Bibliotheken: [z.B. "Dapper, FluentValidation, MediatR"]
+
+Projektstruktur:
+[ENTWEDER: eigene Struktur einfügen ODER: "noch nicht definiert, schlage etwas vor"]
+
+Erstelle die architecture.md mit folgenden Abschnitten:
+
+# Architecture: myproject
+
+## Überblick
+[1–2 Sätze: Was macht die App, welches Architekturmuster]
+
+## Tech-Stack
+[Tabelle: Komponente | Technologie | Version/Begründung]
+
+## Projektstruktur
+[Verzeichnisbaum mit Erklärung jedes Ordners]
+
+## Schichten & Verantwortlichkeiten
+[Welche Schicht macht was, wo liegt welche Logik]
+
+## Datenfluss
+[Kurzes Beispiel: Request → Controller → Service → Repository → DB]
+
+## Wichtige Entscheidungen / Constraints
+[Architektur-Entscheidungen die jeder kennen muss]
+
+Halte es unter 200 Zeilen. Fokus auf das Wesentliche für KI-Kontext.
+```
+
+---
+
+### 2.3 `docs/conventions.md` erstellen
+
+**Prompt:**
+```
+Erstelle eine conventions.md für mein C#/.NET Projekt.
+Diese Datei wird von KI-Assistenten (Claude) als Kontext genutzt,
+daher: knapp, präzise, keine Selbstverständlichkeiten.
+
+Meine Präferenzen / Constraints:
+- .NET Version: [z.B. ".NET 9"]
+- Nullable: enabled
+- Coding-Style: [z.B. "Records für DTOs, keine public Fields, keine var bei nicht-offensichtlichen Typen"]
+- SQL: MS SQL Server, sp_executesql für dynamische Queries, NIEMALS String-Konkatenation
+- Fehlerbehandlung: [z.B. "TRY/CATCH in SQL, Result<T> Pattern in C#"]
+- Tests: [z.B. "xUnit, AAA-Pattern (Arrange/Act/Assert)"]
+- Git: [z.B. "Feature-Branches, Conventional Commits"]
+- Sprache: [z.B. "Code auf Englisch, Kommentare auf Deutsch"]
+
+Erstelle conventions.md im Format:
+
+# Conventions: myproject
+
+## C# / .NET
+[Bullet-Points, nur nicht-offensichtliche Regeln]
+
+## SQL (MS SQL Server)
+[Bullet-Points]
+
+## Fehlerbehandlung
+[Pattern-Beschreibung]
+
+## Tests
+[Kurze Konventionen]
+
+## Git
+[Branch-Naming, Commit-Format]
+
+## Was NIEMALS tun
+[Kritische No-Gos als NEVER-Liste]
+
+Maximal 150 Zeilen.
+```
+
+---
+
+### 2.4 `docs/context-snapshots/` – Transition-Template
+
+Dieses Dokument wird nicht einmalig erstellt, sondern am Ende jedes Chats generiert. Template für den Prompt:
+
+```
+Fasse diesen Chat als Transition-Snapshot zusammen.
+Format:
+
+# Context Snapshot: [DATUM] – [THEMA]
+
+## Was wurde entschieden
+- [Entscheidung 1]
+- [Entscheidung 2]
+
+## Was wurde implementiert / erstellt
+- [Code/Datei/Feature]
+
+## Offene Punkte / Nächste Schritte
+- [Was kommt als nächstes]
+
+## Wichtiger Kontext für den nächsten Chat
+[1–2 Sätze die am Anfang des nächsten Chats als Einleitung dienen]
+
+Halte es unter 20 Zeilen – es ist ein Übergabe-Dokument, kein Roman.
+```
+
+---
+
+## 3. claude.ai Projekt einrichten
+
+### Schritt 1: Projekt anlegen
+
+```
+URL: https://claude.ai/projects
+→ "+ Neues Projekt"
+→ Name: "myproject – C# App"
+→ Beschreibung: (optional, Claude sieht das nicht)
+```
+
+### Schritt 2: Projektanweisungen setzen
+
+**Vollständiger Text für das Anweisungsfeld:**
+
+```
+Du bist ein erfahrener C#/.NET und MS SQL Server Entwickler.
+
+SPRACHE & STIL
+- Antworte auf Deutsch
+- Fachbegriffe (Klassen, Methoden, Pattern-Namen) auf Englisch
+- Kurze Erklärungen, Code-first: erst Code zeigen, dann erklären
+- Entscheidungen immer kurz begründen
+
+TECHNOLOGIE-STACK
+- C# / .NET 9, Nullable enabled
+- ASP.NET Core Minimal API
+- MS SQL Server mit T-SQL
+- Dynamische SQL: IMMER sp_executesql, NIEMALS String-Konkatenation
+- Fehlerbehandlung SQL: TRY/CATCH mit RAISERROR
+- Tests: xUnit mit AAA-Pattern
+
+C# KONVENTIONEN
+- Records für DTOs (immutable)
+- Keine public Fields
+- Result<T> Pattern für Fehlerbehandlung in Services
+- Keine Legacy-Patterns (.NET Framework Style)
+
+KONTEXT-NUTZUNG
+- Das DB-Schema findest du in der Wissensbasis (schema.md)
+- Die Projektstruktur in architecture.md
+- Coding-Konventionen in conventions.md
+- Nutze diese Dokumente aktiv bei deinen Antworten
+
+CHAT-VERHALTEN
+- Wenn ein Chat sehr lang wird: weise mich darauf hin, 
+  dass ich einen Transition-Snapshot erstellen und einen neuen Chat starten sollte
+- Frag nach, wenn dir wichtiger Kontext fehlt
+```
+
+### Schritt 3: Wissensbasis befüllen
+
+Dokumente hochladen (in dieser Reihenfolge):
+1. `docs/schema.md`
+2. `docs/architecture.md`
+3. `docs/conventions.md`
+
+**Wissensbasis-Verwaltung:**
+```
+Bei Änderungen am Schema:
+  → schema.md im Repo aktualisieren + committen
+  → Alte schema.md aus KB löschen
+  → Neue hochladen
+
+Faustregel: KB-Dokumente ≤ 3 Dokumente, je ≤ 300 Zeilen
+```
+
+---
+
+## 4. Aufgaben & Workflows – Alle Einsatzzwecke
+
+### 4.1 Feature-Entwicklung
+
+**Chat-Titel:** `Feature: [Name]`
+
+**Einstiegs-Prompt:**
+```
+Ich entwickle ein neues Feature für myproject.
+
+Feature: [NAME]
+Anforderungen:
+- [Anforderung 1]
+- [Anforderung 2]
+
+Betroffene Bereiche: [z.B. "API-Endpoint, Service-Layer, DB-Query"]
+
+Relevanter bestehender Code:
+[CODE EINFÜGEN oder: "noch nichts vorhanden"]
+
+Starte mit: Welche Schritte sind notwendig? 
+Dann gehen wir sie gemeinsam durch.
+```
+
+**Ablauf im Chat:**
+```
+1. Planung/Architektur des Features
+2. API-Endpoint / Controller
+3. Service-Logik
+4. Repository / SQL-Query
+5. Tests
+→ Bei >15 Nachrichten: Transition-Snapshot + neuer Chat
+```
+
+---
+
+### 4.2 Fehlerbehebung / Debugging
+
+**Chat-Titel:** `Bugfix: [Kurzbeschreibung]`
+
+**Einstiegs-Prompt:**
+```
+Ich habe einen Bug in myproject.
+
+Fehlerbeschreibung:
+[WAS passiert]
+
+Erwartetes Verhalten:
+[WAS sollte passieren]
+
+Fehlermeldung / Stack Trace:
+[FEHLERMELDUNG EINFÜGEN]
+
+Betroffener Code:
+[RELEVANTE DATEIEN / METHODEN EINFÜGEN]
+
+Bitte analysiere: Was ist die wahrscheinlichste Ursache?
+Gib mir 2–3 Hypothesen mit Begründung, dann lösen wir es systematisch.
+```
+
+---
+
+### 4.3 Code Review
+
+**Chat-Titel:** `Review: [Feature/Datei]`
+
+**Einstiegs-Prompt:**
+```
+Bitte reviewe den folgenden C#-Code auf:
+1. .NET Best Practices und moderne Patterns
+2. Potenzielle Null-Reference Issues (Nullable)
+3. SQL-Sicherheit (Injection-Risiken)
+4. Performance-Probleme
+5. Verstöße gegen unsere Konventionen (siehe Wissensbasis)
+
+Code:
+[CODE EINFÜGEN]
+
+Format der Antwort:
+- Kritische Probleme (MUST fix)
+- Verbesserungsvorschläge (SHOULD fix)
+- Kleinigkeiten (NICE to have)
+- Überarbeiteter Code am Ende
+```
+
+---
+
+### 4.4 SQL-Entwicklung
+
+**Chat-Titel:** `SQL: [Zweck der Query]`
+
+**Einstiegs-Prompt:**
+```
+Ich brauche eine T-SQL Query für MS SQL Server.
+
+Zweck: [WAS soll die Query tun]
+Betroffene Tabellen: [aus schema.md – Tabellennamen]
+Besondere Anforderungen:
+- [z.B. "muss performant sein für 1M+ Zeilen"]
+- [z.B. "dynamische Filter je nach Parameter"]
+- [z.B. "als gespeicherte Prozedur"]
+
+Kontext:
+[Relevante Teile aus schema.md einfügen ODER: "ist in der Wissensbasis"]
+
+Erstelle:
+1. Die Query mit sp_executesql (bei dynamischem SQL)
+2. Erklärung der Logik
+3. Potenzielle Performance-Hinweise
+```
+
+**Erweiterung für dynamisches Query-Framework:**
+```
+Ergänzung zum obigen Prompt für unser Framework:
+
+Nutze das bewährte dynamische Query-Framework-Pattern:
+- Zentralisierte Konfiguration via Temp-Tabellen
+- Cursor-basierte Iteration über Query-Targets  
+- sp_executesql mit Parametern (NIEMALS String-Konkat)
+- Per-Query Fehlerbehandlung mit TRY/CATCH
+- Toggle-Flags für Ein-/Ausschalten einzelner Queries
+- Dokumentation der Parameter und Ausgabe auf Deutsch
+```
+
+---
+
+### 4.5 Analyse & Visualisierung
+
+**Chat-Titel:** `Analyse: [Thema]`
+
+**Prompt für Code-Analyse:**
+```
+Analysiere folgende C#-Codebasis / diesen Code-Abschnitt:
+
+[CODE EINFÜGEN]
+
+Ich möchte verstehen:
+- Wie funktioniert dieser Code im Überblick?
+- Welche Abhängigkeiten bestehen?
+- Welche potenziellen Probleme gibt es?
+- Wo würdest du als erstes optimieren?
+
+Erstelle wenn sinnvoll:
+- Ein Mermaid-Diagramm der Klassen/Beziehungen
+- Ein Sequenzdiagramm des Datenflusses
+```
+
+**Prompt für DB-Analyse:**
+```
+Analysiere folgende SQL-Query / Stored Procedure:
+
+[SQL EINFÜGEN]
+
+Fragen:
+1. Was macht diese Query genau (Step by Step)?
+2. Performance: Wo sind potenzielle Bottlenecks?
+3. Sicherheit: SQL-Injection-Risiken?
+4. Verbesserungsvorschläge mit überarbeitetem Code
+```
+
+---
+
+### 4.6 Dokumentation erstellen
+
+**Chat-Titel:** `Doku: [Was dokumentiert wird]`
+
+**Prompt für API-Dokumentation:**
+```
+Erstelle eine Markdown-Dokumentation für folgende API-Endpoints:
+
+[CODE EINFÜGEN]
+
+Format pro Endpoint:
+### [METHOD] /pfad/endpoint
+**Zweck:** [1 Satz]
+**Parameter:** [Tabelle]
+**Request Body:** [Beispiel-JSON falls POST/PUT]
+**Response:** [Beispiel-JSON]
+**Fehler:** [Mögliche HTTP-Statuscodes]
+
+Sprache: Deutsch
+Stil: Entwickler-Dokumentation, präzise und knapp
+```
+
+**Prompt für Code-Kommentare:**
+```
+Füge XML-Dokumentationskommentare (/// ) zu folgenden C#-Methoden hinzu.
+Stil: präzise, informativ, keine trivialen Kommentare wie "// setzt den Wert".
+
+[CODE EINFÜGEN]
+
+Anforderungen:
+- <summary> in Deutsch
+- <param> für alle Parameter
+- <returns> für Rückgabewerte
+- <exception> für dokumentierte Ausnahmen
+- Kommentare sollen den WARUM erklären, nicht das WAS
+```
+
+---
+
+### 4.7 Berichterstellung / Reports
+
+**Chat-Titel:** `Report: [Thema]`
+
+**Prompt:**
+```
+Erstelle einen [TYP: technischen / Management-] Bericht zu:
+[THEMA]
+
+Grundlage:
+[DATEN / CODE / ANALYSE EINFÜGEN]
+
+Zielgruppe: [z.B. "Entwicklungsteam" / "Projektleitung"]
+
+Enthaltene Abschnitte:
+- Zusammenfassung (Executive Summary, 3–5 Sätze)
+- Technischer Hintergrund
+- Analyse / Befunde
+- Empfehlungen (priorisiert)
+- Nächste Schritte
+
+Format: Markdown, auf Deutsch
+Ton: [professionell/sachlich / direkt/technisch]
+```
+
+---
+
+### 4.8 Refactoring
+
+**Chat-Titel:** `Refactoring: [Klasse/Modul]`
+
+**Prompt:**
+```
+Ich möchte folgenden C#-Code refactoren.
+
+Aktueller Code:
+[CODE EINFÜGEN]
+
+Ziele des Refactorings:
+- [z.B. "Lesbarkeit verbessern"]
+- [z.B. "SOLID-Prinzipien einhalten"]
+- [z.B. "Dependency Injection vorbereiten"]
+- [z.B. "Testbarkeit erhöhen"]
+
+Constraints:
+- Keine breaking changes an der öffentlichen API
+- .NET 9 / Nullable enabled
+- [weitere Constraints]
+
+Vorgehen:
+1. Analysiere den Code: Was sind die Hauptprobleme?
+2. Schlage Refactoring-Schritte vor (nicht alles auf einmal)
+3. Beginne mit dem wichtigsten Schritt
+```
+
+---
+
+## 5. Chat-Management: Kontext-Erhaltung ohne Claude Code
+
+Da kein Claude Code verfügbar ist, ersetzt dieses manuelle System das CLAUDE.md:
+
+### Checkliste pro Chat-Start
+
+```
+☐ Bin ich im richtigen Projekt? (claude.ai/project/myproject)
+☐ Hat der Chat einen klaren Titel und Fokus?
+☐ Gibt es einen Transition-Snapshot vom letzten Chat?
+   → Wenn ja: als ersten Satz einfügen
+☐ Brauche ich spezifischen Code-Kontext?
+   → Relevante Dateien als Code-Block einfügen
+```
+
+### Checkliste Chat-Ende
+
+```
+☐ Transition-Snapshot generieren (Prompt aus Abschnitt 2.4)
+☐ Snapshot in docs/context-snapshots/ speichern (optional, für Nachvollziehbarkeit)
+☐ Generierte Code-Snippets ins Repo übernommen?
+☐ Wissensbasis aktualisierungsbedürftig? (schema.md etc.)
+```
+
+### Wann einen neuen Chat starten?
+
+```
+→ Thema / Aufgabe abgeschlossen
+→ Mehr als ~15 Nachrichten (Kontext wird teuer)
+→ Claude gibt inkonsistente Antworten (Kontext-Overflow)
+→ Anderes Feature / anderer Bereich wird angegangen
+→ Claude "vergisst" frühere Entscheidungen
+```
+
+### Code-Austausch-Workflow (ohne Claude Code)
+
+```
+GitHub → claude.ai:
+  1. Datei in VS/Rider/Editor öffnen
+  2. Relevanten Abschnitt kopieren
+  3. Als Code-Block in den Chat einfügen:
+     ```csharp
+     [CODE]
+     ```
+
+claude.ai → GitHub:
+  1. Claudes Code aus der Antwort kopieren
+  2. In die entsprechende Datei einfügen / ersetzen
+  3. Lokal testen
+  4. Committen und pushen
+```
+
+> **Tipp:** Nicht die gesamte Datei einfügen – nur den relevanten Abschnitt (Klasse, Methode, Query). Spart Token und hält den Kontext fokussiert.
+
+---
+
+## 6. Wissensbasis-Wartung
+
+### Wann KB-Dokumente aktualisieren?
+
+| Ereignis | Aktion |
+|----------|--------|
+| Neue Tabelle hinzugefügt | schema.md aktualisieren + neu hochladen |
+| Neue Schicht / neues Projekt hinzugefügt | architecture.md aktualisieren |
+| Neues Coding-Pattern beschlossen | conventions.md ergänzen |
+| Claude gibt falsche Antworten basierend auf KB | Dokument prüfen und korrigieren |
+
+### KB-Update-Prompt
+
+```
+Das folgende Dokument in meiner Wissensbasis (schema.md) 
+ist veraltet. Hier ist die aktuelle Version:
+
+[NEUES DOKUMENT EINFÜGEN]
+
+Bitte bestätige, dass du die neue Version verwendest.
+[Dann: alte Datei aus KB löschen, neue hochladen]
+```
+
+---
+
+## 7. Vollständige Cheat-Sheet
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║              MYPROJECT – TÄGLICHE REFERENZ                   ║
+╠══════════════════════════════════╦═══════════════════════════╣
+║  AUFGABE                         ║  WO / WIE                 ║
+╠══════════════════════════════════╬═══════════════════════════╣
+║  Neues Feature planen            ║  Projekt-Chat, neu        ║
+║  Feature implementieren          ║  Projekt-Chat, Code paste ║
+║  Bug analysieren + fixen         ║  Projekt-Chat, neu        ║
+║  Code Review                     ║  Projekt-Chat, neu        ║
+║  SQL-Query entwickeln            ║  Projekt-Chat, neu        ║
+║  Dokumentation schreiben         ║  Projekt-Chat, neu        ║
+║  Refactoring                     ║  Projekt-Chat, neu        ║
+║  Einmalige Frage (kein Projekt)  ║  Freier Chat              ║
+╠══════════════════════════════════╬═══════════════════════════╣
+║  Chat wird lang (>15 Msg)        ║  Snapshot → neuer Chat    ║
+║  Thema wechselt                  ║  Neuer Chat               ║
+║  Schema ändert sich              ║  schema.md update + Upload║
+║  Claude gibt falsche KB-Antwort  ║  KB-Dokument prüfen       ║
+╠══════════════════════════════════╬═══════════════════════════╣
+║  Code: GitHub → Claude           ║  Ausschnitt Copy/Paste    ║
+║  Code: Claude → GitHub           ║  Copy/Paste → Datei       ║
+╚══════════════════════════════════╩═══════════════════════════╝
+```
+
+---
+
+## 8. Einmal-Einrichtung: Gesamtreihenfolge
+
+```
+Tag 1 – Setup:
+
+[ ] 1. GitHub-Repo anlegen / Struktur erstellen (docs/ Ordner)
+[ ] 2. Freier Chat: schema.md generieren (Prompt 2.1)
+[ ] 3. Freier Chat: architecture.md generieren (Prompt 2.2)
+[ ] 4. Freier Chat: conventions.md generieren (Prompt 2.3)
+[ ] 5. Alle drei Dateien committen: git commit docs/
+[ ] 6. claude.ai Projekt anlegen (Abschnitt 3)
+[ ] 7. Projektanweisungen einfügen (kompletter Text aus 3.2)
+[ ] 8. schema.md, architecture.md, conventions.md hochladen
+[ ] 9. Test-Chat im Projekt: "Was weißt du über mein Datenbankschema?"
+       → Claude sollte schema.md korrekt referenzieren
+
+Ab Tag 2 – Arbeiten:
+
+[ ] Immer im Projekt-Chat starten
+[ ] Pro Chat eine fokussierte Aufgabe
+[ ] Passenden Einstiegs-Prompt aus Abschnitt 4 verwenden
+[ ] Am Chat-Ende Transition-Snapshot generieren
+[ ] Code manuell ins Repo übernehmen
+```
+
+---
+
+*Quellen: Anthropic Dokumentation (support.claude.com), claude.ai Help Center, Stand März 2026*
